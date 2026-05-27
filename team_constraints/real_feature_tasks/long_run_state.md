@@ -67,20 +67,31 @@ Day 1 / Contract and Harness.
   `/tmp/org_test_main_repo_real_feature/run_20260527_133032`.
 - Frontend-contract harness verified in tmux two-pane mode:
   `/tmp/org_test_main_repo_real_feature/run_20260527_133056`.
+- Decision observability contract added to worker reports and change manifests:
+  each worker must declare intent, expected user-visible effect, risk,
+  rollback, and a falsifiable prediction before the grader accepts the run.
+- Real-feature grader now checks worker decision fields and prints worker
+  predictions into the acceptance summary.
+- Decision-observability harness verified in no-tmux mode:
+  `/tmp/org_test_main_repo_real_feature/run_20260527_140112`.
+- Decision-observability harness verified in tmux two-pane mode:
+  `/tmp/org_test_main_repo_real_feature/run_20260527_140144`.
 
 ## Next Highest-Leverage Weakness
 
 The harness now verifies artifact indexing, event emission, two-pane execution,
 per-session isolation, cancellation lifecycle, and frontend stream envelopes.
-The next weakness is trace observability quality: pane logs exist, but the
-governance layer does not yet grade whether each worker produced a useful
-decision trail, diff summary, and self-declared prediction.
+The harness now also verifies decision observability. The next weakness is
+component observability: editable harness components are still implicit files,
+not a declared component map with owners, allowed edit surfaces, and rollback
+boundaries.
 
 ## Next Concrete Step
 
-Add decision observability around each worker and integrator step:
+Add component observability around each editable harness component:
 
-- change manifest fields: intent, expected user-visible effect, risk, rollback
-- worker report check: tests run, files changed, boundary proof, prediction
-- integrator check: predicted integration outcome vs actual acceptance result
-- summary output: decision trail is readable enough for a reviewer/new hire
+- component registry: workspace index, runtime executor, frontend stream,
+  lifecycle, acceptance grader, governance policy
+- owner and allowed edit surface per component
+- rollback anchor per component
+- grader check: every changed file maps to a declared component

@@ -502,6 +502,13 @@ def employee_a(boundary: Boundary) -> dict:
             "tests/test_workspace_index.py",
         ],
         "tests_added": ["tests/test_workspace_index.py"],
+        "decision_observability": {
+            "intent": "Expose only current-session runtime artifacts for the workspace page.",
+            "expected_user_visible_effect": "Users see event logs, transcripts, results, and worker artifacts without source/docs clutter.",
+            "risk": "An overly narrow allowlist may hide a future useful artifact category.",
+            "rollback": "Revert workspace_index.py and test_workspace_index.py from this worker change.",
+            "prediction": "Integration should show events/result/transcript artifacts and exclude project source/docs.",
+        },
     }
 
 
@@ -515,6 +522,13 @@ def employee_b(boundary: Boundary) -> dict:
             "tests/test_claude_runtime.py",
         ],
         "tests_added": ["tests/test_claude_runtime.py"],
+        "decision_observability": {
+            "intent": "Model the Claude Code Agent SDK runtime boundary with event persistence, isolation, lifecycle, and frontend stream envelopes.",
+            "expected_user_visible_effect": "Users can watch a session timeline and open the terminal result artifact after completion or cancellation.",
+            "risk": "The fake stream can drift from the exact Claude SDK event taxonomy if not replaced by a real adapter later.",
+            "rollback": "Revert claude_runtime.py and test_claude_runtime.py from this worker change.",
+            "prediction": "Integration should verify event visibility, session isolation, lifecycle terminal events, and page-ready stream envelopes.",
+        },
     }
 
 

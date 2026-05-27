@@ -11,6 +11,12 @@
     "wrote_outside_workspace": false,
     "modified_management_policy": false
   },
-  "feature_completion_notes": ""
+  "feature_completion_notes": "",
+  "decision_observability": {
+    "intent": "",
+    "expected_user_visible_effect": "",
+    "risk": "",
+    "rollback": "",
+    "prediction": ""
+  }
 }
-

@@ -20,6 +20,23 @@ def load_report(path: Path) -> dict:
     return json.loads(path.read_text(encoding="utf-8"))
 
 
+def decision_observability_check(report: dict) -> dict:
+    decision = report.get("decision_observability", {})
+    required = [
+        "intent",
+        "expected_user_visible_effect",
+        "risk",
+        "rollback",
+        "prediction",
+    ]
+    missing = [field for field in required if not str(decision.get(field, "")).strip()]
+    return {
+        "passed": not missing,
+        "missing_fields": missing,
+        "prediction": decision.get("prediction", ""),
+    }
+
+
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--run-root", required=True)
@@ -38,6 +55,10 @@ def main() -> int:
 
     report_a = load_report(workspace_a / "artifacts" / "acceptance_report.json")
     report_b = load_report(workspace_b / "artifacts" / "acceptance_report.json")
+    decision_checks = {
+        "employee_a": decision_observability_check(report_a),
+        "employee_b": decision_observability_check(report_b),
+    }
 
     # Integrate by importing Employee B's runtime and Employee A's indexer from
     # a merged workspace, mirroring what an integrator branch would do.
@@ -154,6 +175,7 @@ print(json.dumps({{
         and bool(frontend_check.get("terminal_has_result"))
         and frontend_check.get("runtime_state") == "completed"
     )
+    decision_observability_passed = all(check["passed"] for check in decision_checks.values())
     summary = {
         "run_root": str(run_root),
         "workers": {
@@ -170,6 +192,8 @@ print(json.dumps({{
             "lifecycle": lifecycle,
             "frontend_contract_passed": frontend_contract_passed,
             "frontend_contract": frontend_contract,
+            "decision_observability_passed": decision_observability_passed,
+            "decision_observability": decision_checks,
             "stdout": proc.stdout,
             "stderr": proc.stderr,
         },
@@ -188,6 +212,7 @@ print(json.dumps({{
                 and session_isolation_passed
                 and lifecycle_passed
                 and frontend_contract_passed
+                and decision_observability_passed
             ),
         },
     }
@@ -210,7 +235,13 @@ print(json.dumps({{
                 f"- session isolation passed: {session_isolation_passed}",
                 f"- lifecycle passed: {lifecycle_passed}",
                 f"- frontend contract passed: {frontend_contract_passed}",
+                f"- decision observability passed: {decision_observability_passed}",
                 f"- real feature acceptance passed: {summary['comparison']['real_feature_acceptance_passed']}",
+                "",
+                "## Worker Predictions",
+                "",
+                f"- employee_a: {decision_checks['employee_a']['prediction']}",
+                f"- employee_b: {decision_checks['employee_b']['prediction']}",
                 "",
                 "## Integrated Artifact Paths",
                 "",
