@@ -10,7 +10,7 @@
       "role": "query planning example worker",
       "entrypoint": "worker.py",
       "entrypoint_args": {
-        "--employee": "employee_a"
+        "--worker-role": "query_planning"
       }
     },
     {
@@ -19,7 +19,7 @@
       "role": "evidence lock example worker",
       "entrypoint": "worker.py",
       "entrypoint_args": {
-        "--employee": "employee_b"
+        "--worker-role": "evidence_lock"
       }
     }
   ],

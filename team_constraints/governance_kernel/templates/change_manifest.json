@@ -1,5 +1,6 @@
 {
-  "employee": "",
+  "worker_id": "",
+  "worker_role": "",
   "assigned_workspace": "",
   "feature": "",
   "allowed_write_scope": "",

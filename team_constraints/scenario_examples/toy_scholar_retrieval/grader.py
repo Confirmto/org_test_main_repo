@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Grade the two-employee academic retrieval acceptance scene."""
+"""Grade the two-worker academic retrieval acceptance scene."""
 
 from __future__ import annotations
 

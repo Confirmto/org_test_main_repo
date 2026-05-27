@@ -23,7 +23,7 @@ No feature worker may add another top-level item.
 `team_constraints/` stores:
 
 - workflow policy
-- employee workspace boundaries
+- worker workspace boundaries
 - acceptance harness
 - grading scripts
 
@@ -31,4 +31,3 @@ No feature worker may add another top-level item.
 
 `CLAUEDE.md` is management-owned. Treat it as read-only unless explicitly acting
 as a repository maintainer.
-

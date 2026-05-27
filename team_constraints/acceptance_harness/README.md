@@ -16,7 +16,7 @@ python3 team_constraints/governance_kernel/harness/run_scenario.py \
 
 Compatibility wrappers:
 
-- `run_two_employee_acceptance.sh`: runs the toy scholar retrieval scenario.
+- `run_two_worker_acceptance.sh`: legacy wrapper for the toy scholar retrieval scenario.
 - `run_real_feature_acceptance.sh`: runs the runtime-streaming example scenario.
 
 Do not add project-specific governance logic here. New project examples should

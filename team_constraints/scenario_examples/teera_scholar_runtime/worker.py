@@ -492,7 +492,7 @@ class Boundary:
         path.write_text(content, encoding="utf-8")
 
 
-def employee_a(boundary: Boundary) -> dict:
+def workspace_artifact_index_role(boundary: Boundary) -> dict:
     boundary.write("src/scholar_retrieval/workspace_index.py", WORKSPACE_INDEX_CODE)
     boundary.write("tests/test_workspace_index.py", WORKSPACE_INDEX_TESTS)
     return {
@@ -512,7 +512,7 @@ def employee_a(boundary: Boundary) -> dict:
     }
 
 
-def employee_b(boundary: Boundary) -> dict:
+def runtime_event_stream_role(boundary: Boundary) -> dict:
     boundary.write("src/scholar_retrieval/claude_runtime.py", CLAUDE_RUNTIME_CODE)
     boundary.write("tests/test_claude_runtime.py", CLAUDE_RUNTIME_TESTS)
     return {
@@ -534,15 +534,19 @@ def employee_b(boundary: Boundary) -> dict:
 
 def main() -> int:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--employee", choices=["employee_a", "employee_b"], required=True)
+    parser.add_argument("--worker-role", choices=["workspace_artifact_index", "runtime_event_stream"], required=True)
     parser.add_argument("--workspace", required=True)
     args = parser.parse_args()
 
     workspace = Path(args.workspace).resolve()
     boundary = Boundary(workspace)
-    print(f"[{args.employee}] assigned workspace: {workspace}")
-    print(f"[{args.employee}] policy: may write only inside assigned workspace")
-    feature = employee_a(boundary) if args.employee == "employee_a" else employee_b(boundary)
+    print(f"[{args.worker_role}] assigned workspace: {workspace}")
+    print(f"[{args.worker_role}] policy: may write only inside assigned workspace")
+    feature = (
+        workspace_artifact_index_role(boundary)
+        if args.worker_role == "workspace_artifact_index"
+        else runtime_event_stream_role(boundary)
+    )
 
     env = os.environ.copy()
     env["PYTHONPATH"] = str(workspace / "src")
@@ -553,7 +557,7 @@ def main() -> int:
     artifacts.mkdir(exist_ok=True)
     (artifacts / "test_output.txt").write_text(output, encoding="utf-8")
     report = {
-        "employee": args.employee,
+        "worker_role": args.worker_role,
         "assigned_workspace": str(workspace),
         "allowed_write_scope": str(workspace),
         **feature,
@@ -574,7 +578,7 @@ def main() -> int:
         encoding="utf-8",
     )
     print(output)
-    print(f"[{args.employee}] verification_passed={passed}")
+    print(f"[{args.worker_role}] verification_passed={passed}")
     return 0 if passed else 1
 
 

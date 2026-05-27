@@ -22,7 +22,7 @@ Day 1 / Contract and Harness.
 
 - Top-level repo constrained to `CLAUEDE.md`, `this_project/`, `team_constraints/`.
 - TEERA v2.1 baseline summarized.
-- Toy two-employee tmux acceptance harness created and verified.
+- Toy two-worker tmux acceptance harness created and verified.
 - Real feature project spec added.
 - Real Employee A/B task split added.
 - Integrator acceptance plan added.

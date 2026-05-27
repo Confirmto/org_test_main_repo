@@ -10,7 +10,7 @@
       "role": "workspace artifact surface example worker",
       "entrypoint": "worker.py",
       "entrypoint_args": {
-        "--employee": "employee_a"
+        "--worker-role": "workspace_artifact_index"
       }
     },
     {
@@ -19,7 +19,7 @@
       "role": "runtime event stream example worker",
       "entrypoint": "worker.py",
       "entrypoint_args": {
-        "--employee": "employee_b"
+        "--worker-role": "runtime_event_stream"
       }
     }
   ],
