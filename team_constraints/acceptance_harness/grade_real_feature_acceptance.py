@@ -47,10 +47,12 @@ def main() -> int:
 import json
 from pathlib import Path
 from scholar_retrieval.claude_runtime import (
+    build_frontend_stream_envelopes,
     FakeClaudeAgentSDKStream,
     run_code_analysis_runtime,
     run_isolated_code_analysis_runtime,
     run_managed_isolated_code_analysis_runtime,
+    validate_frontend_stream_envelopes,
 )
 from scholar_retrieval.workspace_index import artifact_dicts
 
@@ -98,6 +100,8 @@ cancelled = run_managed_isolated_code_analysis_runtime(
 )
 cancelled_events_path = Path(cancelled["session_workspace_root"]) / "events" / "events.jsonl"
 cancelled_last_event = json.loads(cancelled_events_path.read_text(encoding="utf-8").splitlines()[-1])
+frontend_stream = build_frontend_stream_envelopes(completed["session_workspace_root"])
+frontend_stream_check = validate_frontend_stream_envelopes(frontend_stream)
 session_isolation = {{
     "session_a_root": session_a["session_workspace_root"],
     "session_b_root": session_b["session_workspace_root"],
@@ -113,11 +117,16 @@ lifecycle = {{
     "cancelled_root": cancelled["session_workspace_root"],
     "separate_roots": completed["session_workspace_root"] != cancelled["session_workspace_root"],
 }}
+frontend_contract = {{
+    "check": frontend_stream_check,
+    "terminal_envelope": frontend_stream[-1] if frontend_stream else {{}},
+}}
 print(json.dumps({{
     "result": result,
     "artifacts": artifacts,
     "session_isolation": session_isolation,
     "lifecycle": lifecycle,
+    "frontend_contract": frontend_contract,
 }}, ensure_ascii=False))
 '''
     proc = run([sys.executable, "-c", code], run_root, env)
@@ -138,6 +147,13 @@ print(json.dumps({{
         and lifecycle.get("cancelled_terminal_event") == "cancelled"
         and bool(lifecycle.get("separate_roots"))
     )
+    frontend_contract = payload.get("frontend_contract", {})
+    frontend_check = frontend_contract.get("check", {})
+    frontend_contract_passed = (
+        bool(frontend_check.get("monotonic"))
+        and bool(frontend_check.get("terminal_has_result"))
+        and frontend_check.get("runtime_state") == "completed"
+    )
     summary = {
         "run_root": str(run_root),
         "workers": {
@@ -152,6 +168,8 @@ print(json.dumps({{
             "session_isolation": isolation,
             "lifecycle_passed": lifecycle_passed,
             "lifecycle": lifecycle,
+            "frontend_contract_passed": frontend_contract_passed,
+            "frontend_contract": frontend_contract,
             "stdout": proc.stdout,
             "stderr": proc.stderr,
         },
@@ -169,6 +187,7 @@ print(json.dumps({{
                 and event_artifacts_visible
                 and session_isolation_passed
                 and lifecycle_passed
+                and frontend_contract_passed
             ),
         },
     }
@@ -190,6 +209,7 @@ print(json.dumps({{
                 f"- event artifacts visible: {event_artifacts_visible}",
                 f"- session isolation passed: {session_isolation_passed}",
                 f"- lifecycle passed: {lifecycle_passed}",
+                f"- frontend contract passed: {frontend_contract_passed}",
                 f"- real feature acceptance passed: {summary['comparison']['real_feature_acceptance_passed']}",
                 "",
                 "## Integrated Artifact Paths",

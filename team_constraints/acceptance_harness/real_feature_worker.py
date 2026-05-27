@@ -302,6 +302,45 @@ def run_managed_isolated_code_analysis_runtime(
     result_path = Path(result["session_workspace_root"]) / "result" / "result.json"
     result_path.write_text(json.dumps(result, indent=2, ensure_ascii=False) + "\\n", encoding="utf-8")
     return result
+
+
+def build_frontend_stream_envelopes(session_workspace_root: str | Path) -> list[dict]:
+    root = Path(session_workspace_root).resolve()
+    events_path = root / "events" / "events.jsonl"
+    result_path = root / "result" / "result.json"
+    result_payload = json.loads(result_path.read_text(encoding="utf-8")) if result_path.exists() else {}
+    terminal_type = str(result_payload.get("terminal_event_type", ""))
+    runtime_state = str(result_payload.get("runtime_state") or "completed")
+    envelopes: list[dict] = []
+    for line in events_path.read_text(encoding="utf-8").splitlines():
+        event = json.loads(line)
+        artifact_refs: list[dict] = []
+        if event["event_type"] == terminal_type and result_path.exists():
+            artifact_refs.append({"kind": "result", "relative_path": "result/result.json"})
+        envelopes.append(
+            {
+                "session_id": event["session_id"],
+                "sequence": event["sequence"],
+                "event_type": event["event_type"],
+                "text": event["text"],
+                "runtime_state": runtime_state if event["event_type"] == terminal_type else "running",
+                "artifact_refs": artifact_refs,
+            }
+        )
+    return envelopes
+
+
+def validate_frontend_stream_envelopes(envelopes: list[dict]) -> dict:
+    sequences = [item["sequence"] for item in envelopes]
+    monotonic = sequences == sorted(sequences) and len(sequences) == len(set(sequences))
+    terminal = envelopes[-1] if envelopes else {}
+    terminal_has_result = any(ref.get("relative_path") == "result/result.json" for ref in terminal.get("artifact_refs", []))
+    return {
+        "monotonic": monotonic,
+        "terminal_has_result": terminal_has_result,
+        "event_count": len(envelopes),
+        "runtime_state": terminal.get("runtime_state", "empty"),
+    }
 '''
 
 
@@ -313,9 +352,11 @@ from pathlib import Path
 from scholar_retrieval.claude_runtime import (
     FakeClaudeAgentSDKStream,
     normalize_event,
+    build_frontend_stream_envelopes,
     run_code_analysis_runtime,
     run_isolated_code_analysis_runtime,
     run_managed_isolated_code_analysis_runtime,
+    validate_frontend_stream_envelopes,
 )
 
 
@@ -409,6 +450,25 @@ class ClaudeRuntimeTests(unittest.TestCase):
             )
             self.assertEqual(result["runtime_state"], "failed")
             self.assertEqual(result["terminal_event_type"], "timeout")
+
+    def test_frontend_stream_envelope_is_page_ready(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            result = run_managed_isolated_code_analysis_runtime(
+                "session-ui",
+                tmp,
+                "show progress",
+                FakeClaudeAgentSDKStream([
+                    {"type": "message_start", "text": "start"},
+                    {"type": "content_block_delta", "delta": "working"},
+                    {"type": "result", "message": "done"},
+                ]),
+            )
+            envelopes = build_frontend_stream_envelopes(result["session_workspace_root"])
+            check = validate_frontend_stream_envelopes(envelopes)
+            self.assertTrue(check["monotonic"])
+            self.assertTrue(check["terminal_has_result"])
+            self.assertEqual(check["runtime_state"], "completed")
+            self.assertEqual(envelopes[-1]["artifact_refs"][0]["relative_path"], "result/result.json")
 
 
 if __name__ == "__main__":

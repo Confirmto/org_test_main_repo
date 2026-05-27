@@ -56,20 +56,31 @@ Day 1 / Contract and Harness.
   `/tmp/org_test_main_repo_real_feature/run_20260527_130044`.
 - Lifecycle-aware harness verified in tmux two-pane mode:
   `/tmp/org_test_main_repo_real_feature/run_20260527_130110`.
+- Frontend stream envelope contract added:
+  `build_frontend_stream_envelopes()` converts runtime JSONL into page-ready
+  envelopes with `session_id`, `sequence`, `event_type`, `text`,
+  `runtime_state`, and `artifact_refs`.
+- Frontend stream validation added:
+  `validate_frontend_stream_envelopes()` checks monotonic event ordering and
+  requires terminal envelopes to link to `result/result.json`.
+- Frontend-contract harness verified in no-tmux mode:
+  `/tmp/org_test_main_repo_real_feature/run_20260527_133032`.
+- Frontend-contract harness verified in tmux two-pane mode:
+  `/tmp/org_test_main_repo_real_feature/run_20260527_133056`.
 
 ## Next Highest-Leverage Weakness
 
 The harness now verifies artifact indexing, event emission, two-pane execution,
-per-session isolation, and cancellation lifecycle. The next weakness is that the
-frontend stream contract is still implicit: we verify JSONL artifacts, but not
-the shape a workspace page/SSE/WebSocket consumer would receive.
+per-session isolation, cancellation lifecycle, and frontend stream envelopes.
+The next weakness is trace observability quality: pane logs exist, but the
+governance layer does not yet grade whether each worker produced a useful
+decision trail, diff summary, and self-declared prediction.
 
 ## Next Concrete Step
 
-Add frontend-facing stream contract around the real `code_analysis` trigger path:
+Add decision observability around each worker and integrator step:
 
-- normalized event envelope: `session_id`, `sequence`, `event_type`, `text`,
-  `artifact_refs`, `runtime_state`
-- monotonic ordering check for streamed events
-- page-readiness check: every terminal event links to the result artifact
-- grader check: stream envelope can reconstruct the visible workspace timeline
+- change manifest fields: intent, expected user-visible effect, risk, rollback
+- worker report check: tests run, files changed, boundary proof, prediction
+- integrator check: predicted integration outcome vs actual acceptance result
+- summary output: decision trail is readable enough for a reviewer/new hire
