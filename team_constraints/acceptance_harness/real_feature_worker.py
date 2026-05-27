@@ -263,6 +263,45 @@ def run_isolated_code_analysis_runtime(
     result["base_workspace_root"] = str(Path(base_workspace_root).resolve())
     result["session_workspace_root"] = str(session_root)
     return result
+
+
+def run_managed_isolated_code_analysis_runtime(
+    user_session_id: str,
+    base_workspace_root: str | Path,
+    prompt: str,
+    sdk_stream: Iterable[Mapping[str, Any]],
+    cancel_after_events: int | None = None,
+    timeout_after_events: int | None = None,
+) -> dict:
+    if cancel_after_events is not None and timeout_after_events is not None:
+        raise ValueError("cancel_after_events and timeout_after_events are mutually exclusive")
+    forwarded: list[Mapping[str, Any]] = []
+    for idx, raw in enumerate(sdk_stream, start=1):
+        forwarded.append(raw)
+        if cancel_after_events is not None and idx >= cancel_after_events:
+            forwarded.append({"type": "cancelled", "message": "cancelled by user"})
+            break
+        if timeout_after_events is not None and idx >= timeout_after_events:
+            forwarded.append({"type": "timeout", "message": "runtime timeout"})
+            break
+    result = run_isolated_code_analysis_runtime(
+        user_session_id,
+        base_workspace_root,
+        prompt,
+        FakeClaudeAgentSDKStream(forwarded),
+    )
+    terminal = result["terminal_event_type"]
+    if terminal == "cancelled":
+        result["runtime_state"] = "cancelled"
+    elif terminal == "timeout":
+        result["runtime_state"] = "failed"
+    elif terminal == "result":
+        result["runtime_state"] = "completed"
+    else:
+        result["runtime_state"] = "running"
+    result_path = Path(result["session_workspace_root"]) / "result" / "result.json"
+    result_path.write_text(json.dumps(result, indent=2, ensure_ascii=False) + "\\n", encoding="utf-8")
+    return result
 '''
 
 
@@ -276,6 +315,7 @@ from scholar_retrieval.claude_runtime import (
     normalize_event,
     run_code_analysis_runtime,
     run_isolated_code_analysis_runtime,
+    run_managed_isolated_code_analysis_runtime,
 )
 
 
@@ -334,6 +374,41 @@ class ClaudeRuntimeTests(unittest.TestCase):
                     "bad",
                     FakeClaudeAgentSDKStream([]),
                 )
+
+    def test_managed_runtime_writes_cancel_terminal_event(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            result = run_managed_isolated_code_analysis_runtime(
+                "session-cancel",
+                tmp,
+                "long run",
+                FakeClaudeAgentSDKStream([
+                    {"type": "message_start", "text": "start"},
+                    {"type": "content_block_delta", "delta": "working"},
+                    {"type": "content_block_delta", "delta": "still working"},
+                ]),
+                cancel_after_events=2,
+            )
+            self.assertEqual(result["runtime_state"], "cancelled")
+            self.assertEqual(result["terminal_event_type"], "cancelled")
+            lines = (
+                Path(result["session_workspace_root"]) / "events" / "events.jsonl"
+            ).read_text(encoding="utf-8").splitlines()
+            self.assertEqual(json.loads(lines[-1])["event_type"], "cancelled")
+
+    def test_managed_runtime_writes_timeout_terminal_event(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            result = run_managed_isolated_code_analysis_runtime(
+                "session-timeout",
+                tmp,
+                "long run",
+                FakeClaudeAgentSDKStream([
+                    {"type": "message_start", "text": "start"},
+                    {"type": "content_block_delta", "delta": "working"},
+                ]),
+                timeout_after_events=1,
+            )
+            self.assertEqual(result["runtime_state"], "failed")
+            self.assertEqual(result["terminal_event_type"], "timeout")
 
 
 if __name__ == "__main__":

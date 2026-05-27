@@ -46,20 +46,30 @@ Day 1 / Contract and Harness.
   `/tmp/org_test_main_repo_real_feature/run_20260527_123103`.
 - Updated real-feature harness verified in tmux two-pane mode:
   `/tmp/org_test_main_repo_real_feature/run_20260527_123129`.
+- Managed runtime lifecycle contract added to the fake Claude Agent SDK executor:
+  `run_managed_isolated_code_analysis_runtime()` can emit explicit `cancelled`
+  or `timeout` terminal events while preserving session isolation.
+- Real-feature grader now checks completed-vs-cancelled sessions side by side:
+  completed sessions must stay `completed`, cancelled sessions must end with a
+  `cancelled` terminal event, and their roots must remain separate.
+- Lifecycle-aware harness verified in no-tmux mode:
+  `/tmp/org_test_main_repo_real_feature/run_20260527_130044`.
+- Lifecycle-aware harness verified in tmux two-pane mode:
+  `/tmp/org_test_main_repo_real_feature/run_20260527_130110`.
 
 ## Next Highest-Leverage Weakness
 
 The harness now verifies artifact indexing, event emission, two-pane execution,
-and per-session runtime isolation. The next weakness is that cancellation and
-timeout behavior are not yet part of the contract, so a long Claude Code SDK run
-could still leak resources or leave the UI in an ambiguous state.
+per-session isolation, and cancellation lifecycle. The next weakness is that the
+frontend stream contract is still implicit: we verify JSONL artifacts, but not
+the shape a workspace page/SSE/WebSocket consumer would receive.
 
 ## Next Concrete Step
 
-Add lifecycle controls around the real `code_analysis` trigger path:
+Add frontend-facing stream contract around the real `code_analysis` trigger path:
 
-- request schema: timeout budget and cancellation token
-- runtime state machine: `queued -> running -> cancelling -> cancelled|failed|completed`
-- event streaming contract: cancellation/timeout terminal events are written to JSONL
-- kill/timeout contract: stop one runtime without contaminating another session
-- grader check: cancelled session has a terminal event and leaves completed sessions intact
+- normalized event envelope: `session_id`, `sequence`, `event_type`, `text`,
+  `artifact_refs`, `runtime_state`
+- monotonic ordering check for streamed events
+- page-readiness check: every terminal event links to the result artifact
+- grader check: stream envelope can reconstruct the visible workspace timeline
