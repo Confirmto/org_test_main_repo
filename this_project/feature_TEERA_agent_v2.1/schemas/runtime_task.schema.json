@@ -1,0 +1,33 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "TEERA Scholar Runtime Task",
+  "type": "object",
+  "required": ["task_id", "query", "feature_mode"],
+  "properties": {
+    "task_id": {
+      "type": "string"
+    },
+    "query": {
+      "type": "string",
+      "minLength": 1
+    },
+    "feature_mode": {
+      "type": "string",
+      "enum": ["query_planning", "evidence_lock", "full_runtime"]
+    },
+    "constraints": {
+      "type": "object",
+      "properties": {
+        "max_queries": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 10
+        },
+        "require_stop_after_lock": {
+          "type": "boolean"
+        }
+      }
+    }
+  }
+}
+

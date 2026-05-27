@@ -1,0 +1,42 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "TEERA Scholar Runtime Result",
+  "type": "object",
+  "required": ["task_id", "status", "trace_metrics", "artifacts"],
+  "properties": {
+    "task_id": {
+      "type": "string"
+    },
+    "status": {
+      "type": "string",
+      "enum": ["succeeded", "failed", "partial", "timeout"]
+    },
+    "trace_metrics": {
+      "type": "object",
+      "properties": {
+        "target_seen_in_trace": {
+          "type": "boolean"
+        },
+        "strict_hit": {
+          "type": "boolean"
+        },
+        "strict_given_seen": {
+          "type": "boolean"
+        },
+        "timeout_after_hit": {
+          "type": "boolean"
+        },
+        "tool_calls_after_target_seen": {
+          "type": "integer"
+        }
+      }
+    },
+    "artifacts": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    }
+  }
+}
+

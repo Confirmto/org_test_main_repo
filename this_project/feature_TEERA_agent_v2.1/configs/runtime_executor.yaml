@@ -1,0 +1,20 @@
+runtime:
+  executor: claude_code_sdk
+  mode: local_sandbox
+  allow_worktree: true
+  max_turns: 40
+  timeout_seconds: 1800
+  artifact_scope: artifacts/runtime
+retrieval:
+  max_query_expansions: 5
+  max_evidence_items: 20
+  require_citations: true
+  enable_candidate_lock: true
+trace_metrics:
+  - target_seen_in_trace
+  - strict_hit
+  - strict_given_seen
+  - timeout_after_hit
+  - tool_calls_after_target_seen
+  - first_seen_tool_call
+

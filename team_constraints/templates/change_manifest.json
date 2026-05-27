@@ -1,0 +1,16 @@
+{
+  "employee": "",
+  "assigned_workspace": "",
+  "feature": "",
+  "allowed_write_scope": "",
+  "files_changed": [],
+  "tests_added": [],
+  "verification_command": "",
+  "verification_passed": false,
+  "boundary_check": {
+    "wrote_outside_workspace": false,
+    "modified_management_policy": false
+  },
+  "feature_completion_notes": ""
+}
+
