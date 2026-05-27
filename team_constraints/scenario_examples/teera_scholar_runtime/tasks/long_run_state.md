@@ -76,22 +76,24 @@ Day 1 / Contract and Harness.
   `/tmp/org_test_main_repo_real_feature/run_20260527_140112`.
 - Decision-observability harness verified in tmux two-pane mode:
   `/tmp/org_test_main_repo_real_feature/run_20260527_140144`.
+- Component registry added to `scenario.json`; each editable component declares
+  owner worker role, allowed paths, and rollback text.
+- Real-feature grader now checks every worker-reported changed file against the
+  component registry and fails on unmapped files or missing rollback anchors.
 
 ## Next Highest-Leverage Weakness
 
 The harness now verifies artifact indexing, event emission, two-pane execution,
 per-session isolation, cancellation lifecycle, and frontend stream envelopes.
-The harness now also verifies decision observability. The next weakness is
-component observability: editable harness components are still implicit files,
-not a declared component map with owners, allowed edit surfaces, and rollback
-boundaries.
+The harness now also verifies decision and component observability. The next
+weakness is experience observability: raw pane logs exist, but the grader does
+not yet distill them into a concise, reviewer-friendly evidence corpus.
 
 ## Next Concrete Step
 
-Add component observability around each editable harness component:
+Add experience observability around scenario traces:
 
-- component registry: workspace index, runtime executor, frontend stream,
-  lifecycle, acceptance grader, governance policy
-- owner and allowed edit surface per component
-- rollback anchor per component
-- grader check: every changed file maps to a declared component
+- pane-log summary: command started, verification result, visible failures
+- artifact inventory: acceptance reports, test output, stream JSONL, result JSON
+- drill-down links: per-worker workspace and pane log path
+- grader check: summary contains enough evidence for reviewer/new hire replay

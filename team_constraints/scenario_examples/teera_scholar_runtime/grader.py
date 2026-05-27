@@ -41,6 +41,31 @@ def decision_observability_check(report: dict) -> dict:
     }
 
 
+def component_observability_check(report: dict, components: list[dict]) -> dict:
+    worker_role = report.get("worker_role", "")
+    changed_files = report.get("files_changed", [])
+    owned_components = [
+        component for component in components if component.get("owner_worker_role") == worker_role
+    ]
+    allowed: dict[str, str] = {}
+    for component in owned_components:
+        for path in component.get("allowed_paths", []):
+            allowed[path] = component["id"]
+    unmapped = [path for path in changed_files if path not in allowed]
+    mapped = {path: allowed[path] for path in changed_files if path in allowed}
+    rollback_missing = [
+        component["id"] for component in owned_components if not str(component.get("rollback", "")).strip()
+    ]
+    return {
+        "passed": not unmapped and not rollback_missing and bool(owned_components),
+        "worker_role": worker_role,
+        "owned_components": [component["id"] for component in owned_components],
+        "mapped_files": mapped,
+        "unmapped_files": unmapped,
+        "rollback_missing": rollback_missing,
+    }
+
+
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--run-root", required=True)
@@ -69,6 +94,10 @@ def main() -> int:
     decision_checks = {
         worker_a_id: decision_observability_check(report_a),
         worker_b_id: decision_observability_check(report_b),
+    }
+    component_checks = {
+        worker_a_id: component_observability_check(report_a, scenario.get("components", [])),
+        worker_b_id: component_observability_check(report_b, scenario.get("components", [])),
     }
 
     # Integrate by importing worker B's runtime and worker A's indexer from
@@ -187,6 +216,7 @@ print(json.dumps({{
         and frontend_check.get("runtime_state") == "completed"
     )
     decision_observability_passed = all(check["passed"] for check in decision_checks.values())
+    component_observability_passed = all(check["passed"] for check in component_checks.values())
     summary = {
         "run_root": str(run_root),
         "workers": {
@@ -205,6 +235,8 @@ print(json.dumps({{
             "frontend_contract": frontend_contract,
             "decision_observability_passed": decision_observability_passed,
             "decision_observability": decision_checks,
+            "component_observability_passed": component_observability_passed,
+            "component_observability": component_checks,
             "stdout": proc.stdout,
             "stderr": proc.stderr,
         },
@@ -224,6 +256,7 @@ print(json.dumps({{
                 and lifecycle_passed
                 and frontend_contract_passed
                 and decision_observability_passed
+                and component_observability_passed
             ),
         },
     }
@@ -247,7 +280,15 @@ print(json.dumps({{
                 f"- lifecycle passed: {lifecycle_passed}",
                 f"- frontend contract passed: {frontend_contract_passed}",
                 f"- decision observability passed: {decision_observability_passed}",
+                f"- component observability passed: {component_observability_passed}",
                 f"- real feature acceptance passed: {summary['comparison']['real_feature_acceptance_passed']}",
+                "",
+                "## Component Mapping",
+                "",
+                *[
+                    f"- {worker_id}: {', '.join(check['owned_components'])}; unmapped={check['unmapped_files']}"
+                    for worker_id, check in component_checks.items()
+                ],
                 "",
                 "## Worker Predictions",
                 "",

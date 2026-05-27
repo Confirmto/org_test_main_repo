@@ -23,5 +23,25 @@
       }
     }
   ],
+  "components": [
+    {
+      "id": "workspace_artifact_index",
+      "owner_worker_role": "workspace_artifact_index",
+      "allowed_paths": [
+        "src/scholar_retrieval/workspace_index.py",
+        "tests/test_workspace_index.py"
+      ],
+      "rollback": "Revert workspace_index.py and test_workspace_index.py from the worker workspace."
+    },
+    {
+      "id": "runtime_event_stream",
+      "owner_worker_role": "runtime_event_stream",
+      "allowed_paths": [
+        "src/scholar_retrieval/claude_runtime.py",
+        "tests/test_claude_runtime.py"
+      ],
+      "rollback": "Revert claude_runtime.py and test_claude_runtime.py from the worker workspace."
+    }
+  ],
   "grader": "grader.py"
 }
