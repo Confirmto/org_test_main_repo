@@ -20,6 +20,10 @@ def load_report(path: Path) -> dict:
     return json.loads(path.read_text(encoding="utf-8"))
 
 
+def load_scenario(run_root: Path) -> dict:
+    return json.loads((run_root / "scenario_manifest.json").read_text(encoding="utf-8"))
+
+
 def decision_observability_check(report: dict) -> dict:
     decision = report.get("decision_observability", {})
     required = [
@@ -42,8 +46,15 @@ def main() -> int:
     parser.add_argument("--run-root", required=True)
     args = parser.parse_args()
     run_root = Path(args.run_root).resolve()
-    workspace_a = run_root / "employee_a" / "workspace"
-    workspace_b = run_root / "employee_b" / "workspace"
+    scenario = load_scenario(run_root)
+    workers = scenario["workers"]
+    if len(workers) != 2:
+        raise SystemExit("teera_scholar_runtime example expects exactly two workers")
+    worker_a, worker_b = workers
+    worker_a_id = worker_a["id"]
+    worker_b_id = worker_b["id"]
+    workspace_a = run_root / worker_a["run_dir"] / "workspace"
+    workspace_b = run_root / worker_b["run_dir"] / "workspace"
     integration = run_root / "integration_workspace"
     if integration.exists():
         shutil.rmtree(integration)
@@ -56,11 +67,11 @@ def main() -> int:
     report_a = load_report(workspace_a / "artifacts" / "acceptance_report.json")
     report_b = load_report(workspace_b / "artifacts" / "acceptance_report.json")
     decision_checks = {
-        "employee_a": decision_observability_check(report_a),
-        "employee_b": decision_observability_check(report_b),
+        worker_a_id: decision_observability_check(report_a),
+        worker_b_id: decision_observability_check(report_b),
     }
 
-    # Integrate by importing Employee B's runtime and Employee A's indexer from
+    # Integrate by importing worker B's runtime and worker A's indexer from
     # a merged workspace, mirroring what an integrator branch would do.
     env = os.environ.copy()
     env["PYTHONPATH"] = str(integration / "src")
@@ -179,8 +190,8 @@ print(json.dumps({{
     summary = {
         "run_root": str(run_root),
         "workers": {
-            "employee_a": report_a,
-            "employee_b": report_b,
+            worker_a_id: report_a,
+            worker_b_id: report_b,
         },
         "integration": {
             "passed": integration_passed and event_artifacts_visible,
@@ -229,8 +240,8 @@ print(json.dumps({{
                 "",
                 "## Results",
                 "",
-                f"- employee_a verified: {report_a['verification_passed']}",
-                f"- employee_b verified: {report_b['verification_passed']}",
+                f"- {worker_a_id} verified: {report_a['verification_passed']}",
+                f"- {worker_b_id} verified: {report_b['verification_passed']}",
                 f"- event artifacts visible: {event_artifacts_visible}",
                 f"- session isolation passed: {session_isolation_passed}",
                 f"- lifecycle passed: {lifecycle_passed}",
@@ -240,8 +251,8 @@ print(json.dumps({{
                 "",
                 "## Worker Predictions",
                 "",
-                f"- employee_a: {decision_checks['employee_a']['prediction']}",
-                f"- employee_b: {decision_checks['employee_b']['prediction']}",
+                f"- {worker_a_id}: {decision_checks[worker_a_id]['prediction']}",
+                f"- {worker_b_id}: {decision_checks[worker_b_id]['prediction']}",
                 "",
                 "## Integrated Artifact Paths",
                 "",

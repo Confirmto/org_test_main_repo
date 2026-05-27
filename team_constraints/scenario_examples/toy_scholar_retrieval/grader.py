@@ -12,16 +12,21 @@ def load_report(path: Path) -> dict:
     return json.loads(path.read_text(encoding="utf-8"))
 
 
+def load_scenario(run_root: Path) -> dict:
+    return json.loads((run_root / "scenario_manifest.json").read_text(encoding="utf-8"))
+
+
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--run-root", required=True)
     args = parser.parse_args()
 
     run_root = Path(args.run_root).resolve()
+    scenario = load_scenario(run_root)
     reports = {}
-    for employee in ["employee_a", "employee_b"]:
-        report_path = run_root / employee / "workspace" / "artifacts" / "acceptance_report.json"
-        reports[employee] = load_report(report_path)
+    for worker in scenario["workers"]:
+        report_path = run_root / worker["run_dir"] / "workspace" / "artifacts" / "acceptance_report.json"
+        reports[worker["id"]] = load_report(report_path)
 
     summary = {
         "run_root": str(run_root),
@@ -31,10 +36,11 @@ def main() -> int:
             "isolated_workspaces": True,
             "same_time_budget_policy": True,
         },
-        "employees": reports,
+        "workers": reports,
         "comparison": {
-            "employee_a_score": reports["employee_a"]["feature_completion_score"],
-            "employee_b_score": reports["employee_b"]["feature_completion_score"],
+            "worker_scores": {
+                worker_id: report["feature_completion_score"] for worker_id, report in reports.items()
+            },
             "both_boundary_clean": all(
                 not report["boundary_check"]["wrote_outside_workspace"]
                 and not report["boundary_check"]["modified_management_policy"]
@@ -61,8 +67,7 @@ def main() -> int:
                 "",
                 "## Results",
                 "",
-                f"- employee_a query planning score: {reports['employee_a']['feature_completion_score']}",
-                f"- employee_b evidence lock score: {reports['employee_b']['feature_completion_score']}",
+                *[f"- {worker_id} score: {report['feature_completion_score']}" for worker_id, report in reports.items()],
                 f"- both verified: {summary['comparison']['both_verified']}",
                 f"- boundary clean: {summary['comparison']['both_boundary_clean']}",
                 "",
@@ -77,4 +82,3 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
-

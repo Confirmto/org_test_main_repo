@@ -6,7 +6,7 @@
   "workers": [
     {
       "id": "worker_1",
-      "run_dir": "employee_a",
+      "run_dir": "worker_1",
       "role": "query planning example worker",
       "entrypoint": "worker.py",
       "entrypoint_args": {
@@ -15,7 +15,7 @@
     },
     {
       "id": "worker_2",
-      "run_dir": "employee_b",
+      "run_dir": "worker_2",
       "role": "evidence lock example worker",
       "entrypoint": "worker.py",
       "entrypoint_args": {
