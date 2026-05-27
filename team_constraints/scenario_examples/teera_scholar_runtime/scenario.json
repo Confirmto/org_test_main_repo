@@ -1,0 +1,27 @@
+{
+  "scenario_id": "teera_scholar_runtime",
+  "description": "Example scenario for workspace results plus isolated runtime event streaming.",
+  "project_path": "this_project/feature_TEERA_agent_v2.1",
+  "timeout_seconds": 90,
+  "workers": [
+    {
+      "id": "worker_1",
+      "run_dir": "employee_a",
+      "role": "workspace artifact surface example worker",
+      "entrypoint": "worker.py",
+      "entrypoint_args": {
+        "--employee": "employee_a"
+      }
+    },
+    {
+      "id": "worker_2",
+      "run_dir": "employee_b",
+      "role": "runtime event stream example worker",
+      "entrypoint": "worker.py",
+      "entrypoint_args": {
+        "--employee": "employee_b"
+      }
+    }
+  ],
+  "grader": "grader.py"
+}

@@ -2,51 +2,46 @@
 
 Management-owned policy for this organization repository.
 
-Only repository maintainers may change this file. Feature developers and their
-Claude Code sessions may read it, but must not edit it in feature branches.
+Only repository maintainers may change this file. Worker agents may read it,
+but must not edit it in feature branches.
 
 ## Repository Shape
 
 The top level intentionally contains only:
 
-- `this_project/`: product facts, feature contracts, schemas, minimal baseline code.
-- `team_constraints/`: organization workflow, employee boundaries, acceptance harness.
+- `this_project/`: project facts, contracts, schemas, and minimal baseline code.
+- `team_constraints/`: reusable governance kernel plus optional scenario examples.
 - `CLAUEDE.md`: management-owned root policy.
 
 Do not add new top-level directories without maintainer approval.
 
 ## Operating Principle
 
-This repository is a contract-first main branch. It defines what the team is
-building, how workers may operate, how evidence is collected, and how feature
-completion is judged. Actual feature work happens in isolated work directories,
-branches, or worktrees.
+This repository is a contract-first main branch. It defines how workers may
+operate, how evidence is collected, and how feature completion is judged.
 
-## Current Project
+The governance layer must be project-agnostic. Product names, feature names,
+domain vocabulary, SDK choices, and worker task details belong in scenario
+manifests or project-owned folders, not in the root policy.
 
-`this_project/feature_TEERA_agent_v2.1` is the baseline for a GeoGPT Scholar
-long-horizon academic research agent. The planned feature direction is a
-runtime-in-runtime executor:
+## Reusable Governance Model
 
-`GeoGPT/TEERA orchestration -> Claude Code SDK runtime -> controlled scholar search tools -> evidence ledger -> final report`
+Generic governance lives under:
 
-## Current Real Development Experiment
+`team_constraints/governance_kernel/`
 
-The active long-run experiment is:
+Concrete examples live under:
 
-1. build a workspace page/API that shows all intermediate files and artifacts
-   for the current session
-2. upgrade `code_analysis` into a Claude Code Agent SDK runtime executor with
-   global session isolation
-3. stream all SDK events to the user as if they were watching Claude Code work
-4. capture two employee panes, diffs, manifests, tests, and acceptance reports
-5. use the result to improve this governance base repo for future projects
+`team_constraints/scenario_examples/`
+
+A scenario may point at any project baseline under `this_project/` and define
+its own workers, roles, entrypoints, grader, timeout, and acceptance contract.
 
 ## Non-negotiable Constraints
 
-1. Developers must not edit `CLAUEDE.md`.
-2. Developers must not write outside their assigned work directory.
+1. Workers must not edit `CLAUEDE.md`.
+2. Workers must not write outside their assigned work directory.
 3. Personal files, secrets, raw tokens, and local service endpoints must not be committed.
-4. Every feature branch must include a manifest, tests, and an acceptance report.
-5. Runtime/harness changes must report trace-gap metrics, not only pass/fail.
-6. Multi-agent/team mode requires an explicit integrator and stop condition.
+4. Every scenario run must include a manifest, tests, and an acceptance report.
+5. Harness changes must preserve component, experience, and decision observability.
+6. Multi-worker/team mode requires an explicit integrator or grader and stop condition.
