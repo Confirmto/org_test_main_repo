@@ -46,7 +46,11 @@ def main() -> int:
     code = f'''
 import json
 from pathlib import Path
-from scholar_retrieval.claude_runtime import FakeClaudeAgentSDKStream, run_code_analysis_runtime
+from scholar_retrieval.claude_runtime import (
+    FakeClaudeAgentSDKStream,
+    run_code_analysis_runtime,
+    run_isolated_code_analysis_runtime,
+)
 from scholar_retrieval.workspace_index import artifact_dicts
 
 root = Path({str(integration)!r})
@@ -59,7 +63,33 @@ stream = FakeClaudeAgentSDKStream([
 ])
 result = run_code_analysis_runtime("integration-session", root, "analyze current session", stream)
 artifacts = artifact_dicts(root, "integration-session")
-print(json.dumps({{"result": result, "artifacts": artifacts}}, ensure_ascii=False))
+base = root / "isolated_runtime"
+session_a = run_isolated_code_analysis_runtime(
+    "session-a",
+    base,
+    "analyze A",
+    FakeClaudeAgentSDKStream([{{"type": "result", "message": "A complete"}}]),
+)
+session_b = run_isolated_code_analysis_runtime(
+    "session-b",
+    base,
+    "analyze B",
+    FakeClaudeAgentSDKStream([{{"type": "result", "message": "B complete"}}]),
+)
+session_a_artifacts = artifact_dicts(Path(session_a["session_workspace_root"]), "session-a")
+session_b_artifacts = artifact_dicts(Path(session_b["session_workspace_root"]), "session-b")
+session_isolation = {{
+    "session_a_root": session_a["session_workspace_root"],
+    "session_b_root": session_b["session_workspace_root"],
+    "separate_roots": session_a["session_workspace_root"] != session_b["session_workspace_root"],
+    "a_paths": [item["relative_path"] for item in session_a_artifacts],
+    "b_paths": [item["relative_path"] for item in session_b_artifacts],
+}}
+print(json.dumps({{
+    "result": result,
+    "artifacts": artifacts,
+    "session_isolation": session_isolation,
+}}, ensure_ascii=False))
 '''
     proc = run([sys.executable, "-c", code], run_root, env)
     integration_passed = proc.returncode == 0
@@ -67,6 +97,11 @@ print(json.dumps({{"result": result, "artifacts": artifacts}}, ensure_ascii=Fals
     artifact_paths = [item["relative_path"] for item in payload.get("artifacts", [])]
     required_paths = {"events/events.jsonl", "transcript/transcript.md", "result/result.json"}
     event_artifacts_visible = required_paths.issubset(set(artifact_paths))
+    isolation = payload.get("session_isolation", {})
+    isolated_paths_ok = required_paths.issubset(set(isolation.get("a_paths", []))) and required_paths.issubset(
+        set(isolation.get("b_paths", []))
+    )
+    session_isolation_passed = bool(isolation.get("separate_roots")) and isolated_paths_ok
     summary = {
         "run_root": str(run_root),
         "workers": {
@@ -77,6 +112,8 @@ print(json.dumps({{"result": result, "artifacts": artifacts}}, ensure_ascii=Fals
             "passed": integration_passed and event_artifacts_visible,
             "event_artifacts_visible": event_artifacts_visible,
             "artifact_paths": artifact_paths,
+            "session_isolation_passed": session_isolation_passed,
+            "session_isolation": isolation,
             "stdout": proc.stdout,
             "stderr": proc.stderr,
         },
@@ -92,6 +129,7 @@ print(json.dumps({{"result": result, "artifacts": artifacts}}, ensure_ascii=Fals
                 and report_b["verification_passed"]
                 and integration_passed
                 and event_artifacts_visible
+                and session_isolation_passed
             ),
         },
     }
@@ -111,6 +149,7 @@ print(json.dumps({{"result": result, "artifacts": artifacts}}, ensure_ascii=Fals
                 f"- employee_a verified: {report_a['verification_passed']}",
                 f"- employee_b verified: {report_b['verification_passed']}",
                 f"- event artifacts visible: {event_artifacts_visible}",
+                f"- session isolation passed: {session_isolation_passed}",
                 f"- real feature acceptance passed: {summary['comparison']['real_feature_acceptance_passed']}",
                 "",
                 "## Integrated Artifact Paths",

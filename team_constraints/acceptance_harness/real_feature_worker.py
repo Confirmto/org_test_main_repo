@@ -248,6 +248,21 @@ def run_code_analysis_runtime(
     }
     (result_dir / "result.json").write_text(json.dumps(result, indent=2, ensure_ascii=False) + "\\n", encoding="utf-8")
     return result
+
+
+def run_isolated_code_analysis_runtime(
+    user_session_id: str,
+    base_workspace_root: str | Path,
+    prompt: str,
+    sdk_stream: Iterable[Mapping[str, Any]],
+) -> dict:
+    if not user_session_id or "/" in user_session_id or ".." in user_session_id:
+        raise ValueError(f"invalid user session id: {user_session_id!r}")
+    session_root = Path(base_workspace_root).resolve() / "sessions" / user_session_id
+    result = run_code_analysis_runtime(user_session_id, session_root, prompt, sdk_stream)
+    result["base_workspace_root"] = str(Path(base_workspace_root).resolve())
+    result["session_workspace_root"] = str(session_root)
+    return result
 '''
 
 
@@ -256,7 +271,12 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from scholar_retrieval.claude_runtime import FakeClaudeAgentSDKStream, normalize_event, run_code_analysis_runtime
+from scholar_retrieval.claude_runtime import (
+    FakeClaudeAgentSDKStream,
+    normalize_event,
+    run_code_analysis_runtime,
+    run_isolated_code_analysis_runtime,
+)
 
 
 class ClaudeRuntimeTests(unittest.TestCase):
@@ -283,6 +303,37 @@ class ClaudeRuntimeTests(unittest.TestCase):
             self.assertEqual(json.loads(events[1])["text"], "thinking")
             self.assertIn("tool_use", (root / "transcript" / "transcript.md").read_text(encoding="utf-8"))
             self.assertTrue((root / "result" / "result.json").exists())
+
+    def test_isolated_runtime_keeps_two_sessions_separate(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            base = Path(tmp)
+            run_isolated_code_analysis_runtime(
+                "session-a",
+                base,
+                "analyze A",
+                FakeClaudeAgentSDKStream([{"type": "result", "message": "A done"}]),
+            )
+            run_isolated_code_analysis_runtime(
+                "session-b",
+                base,
+                "analyze B",
+                FakeClaudeAgentSDKStream([{"type": "result", "message": "B done"}]),
+            )
+            a_result = json.loads((base / "sessions" / "session-a" / "result" / "result.json").read_text())
+            b_result = json.loads((base / "sessions" / "session-b" / "result" / "result.json").read_text())
+            self.assertEqual(a_result["session_id"], "session-a")
+            self.assertEqual(b_result["session_id"], "session-b")
+            self.assertFalse((base / "events" / "events.jsonl").exists())
+
+    def test_isolated_runtime_rejects_path_like_session_ids(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            with self.assertRaises(ValueError):
+                run_isolated_code_analysis_runtime(
+                    "../escape",
+                    tmp,
+                    "bad",
+                    FakeClaudeAgentSDKStream([]),
+                )
 
 
 if __name__ == "__main__":

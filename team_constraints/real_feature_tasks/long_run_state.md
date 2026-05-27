@@ -37,20 +37,29 @@ Day 1 / Contract and Harness.
   includes runtime/session outputs only: `events/`, `transcript/`, `result/`,
   `files/`, and worker `artifacts/`; source, docs, schemas, caches, and tests are
   excluded from the page candidate data.
+- Runtime isolation contract added to the fake Claude Agent SDK executor:
+  `run_isolated_code_analysis_runtime()` writes each user session under
+  `sessions/<session_id>/` and rejects path-like session ids.
+- Real-feature grader now checks that two runtime sessions produce separate
+  event/result/transcript roots without cross-session artifact leakage.
+- Updated real-feature harness verified in no-tmux mode:
+  `/tmp/org_test_main_repo_real_feature/run_20260527_123103`.
+- Updated real-feature harness verified in tmux two-pane mode:
+  `/tmp/org_test_main_repo_real_feature/run_20260527_123129`.
 
 ## Next Highest-Leverage Weakness
 
-The real-feature harness now verifies the two core slices independently and as
-an integration. The next weakness is that the runtime contract is still a
-fake-SDK Python module rather than an executable adapter boundary for the actual
-Claude Code Agent SDK process/session lifecycle.
+The harness now verifies artifact indexing, event emission, two-pane execution,
+and per-session runtime isolation. The next weakness is that cancellation and
+timeout behavior are not yet part of the contract, so a long Claude Code SDK run
+could still leak resources or leave the UI in an ambiguous state.
 
 ## Next Concrete Step
 
-Add an adapter contract around the real `code_analysis` trigger path:
+Add lifecycle controls around the real `code_analysis` trigger path:
 
-- request schema: user session id, workspace id, task prompt, allowed root
-- runtime session isolation: per-session workspace and event log
-- event streaming contract: normalized SDK events written to JSONL and frontend stream
+- request schema: timeout budget and cancellation token
+- runtime state machine: `queued -> running -> cancelling -> cancelled|failed|completed`
+- event streaming contract: cancellation/timeout terminal events are written to JSONL
 - kill/timeout contract: stop one runtime without contaminating another session
-- grader check: two sessions run side by side and cannot see each other's artifacts
+- grader check: cancelled session has a terminal event and leaves completed sessions intact
